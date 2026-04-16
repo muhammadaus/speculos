@@ -47,6 +47,7 @@ add_library(emu
         bolos/default.c
         bolos/os_pki.c
         bolos/os_signature.c
+        bolos/metadata_registry.c
         bolos/io/io.c
         bolos/io/sdk/protocol/src/ledger_protocol.c
         bolos/io/sdk/lib_stusb/src/usbd_conf.c

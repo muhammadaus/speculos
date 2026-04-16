@@ -9,6 +9,7 @@
 #include "bolos/endorsement.h"
 #include "bolos/io/io.h"
 #include "bolos/nbgl.h"
+#include "bolos/metadata_registry.h"
 #include "bolos/os_pki.h"
 #include "bolos/touch.h"
 #include "emulate.h"
@@ -944,6 +945,39 @@ static int emulate_syscall_endorsement(unsigned long syscall,
   }
 }
 
+static int emulate_syscall_metadata_registry(unsigned long syscall,
+                                             const unsigned long *parameters,
+                                             unsigned long *ret, bool verbose)
+{
+  switch (syscall) {
+    /* clang-format off */
+
+    SYSCALL1(metadata_registry_set_merkle_root, "(%p)",
+             const uint8_t *, root);
+
+    SYSCALL3(metadata_registry_hash_metadata, "(%p, %u, %p)",
+             const uint8_t *, metadata,
+             size_t,          metadata_len,
+             uint8_t *,       out_hash);
+
+    SYSCALL8(metadata_registry_verify, "(%u, %p, %p, %u, %p, %u, %p, %u)",
+             uint32_t,        chain_id,
+             const uint8_t *, extcodehash,
+             const uint8_t *, metadata,
+             size_t,          metadata_len,
+             const uint8_t *, approval_proof,
+             size_t,          approval_proof_len,
+             const uint8_t *, revocation_proof,
+             size_t,          revocation_proof_len);
+
+  /* clang-format on */
+  default:
+    return SYSCALL_NOT_HANDLED;
+  }
+
+  return SYSCALL_HANDLED;
+}
+
 static int emulate_syscall_os_io(unsigned long syscall,
                                  const unsigned long *parameters,
                                  unsigned long *ret, bool verbose,
@@ -1038,6 +1072,11 @@ int emulate(unsigned long syscall, const unsigned long *parameters,
 
   if (emulate_syscall_endorsement(syscall, parameters, ret, verbose,
                                   api_level) == SYSCALL_HANDLED) {
+    return 0;
+  }
+
+  if (emulate_syscall_metadata_registry(syscall, parameters, ret, verbose) ==
+      SYSCALL_HANDLED) {
     return 0;
   }
 

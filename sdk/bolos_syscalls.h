@@ -192,6 +192,10 @@
 #define SYSCALL_os_pki_verify_ID_IN           0x040000ab
 #define SYSCALL_os_pki_get_info_ID_IN         0x040000ac
 
+#define SYSCALL_metadata_registry_set_merkle_root_ID_IN 0x010000b0
+#define SYSCALL_metadata_registry_hash_metadata_ID_IN  0x030000b1
+#define SYSCALL_metadata_registry_verify_ID_IN         0x080000b2
+
 #define SYSCALL_RESERVED_20_ID_IN 0x02000150
 #define SYSCALL_RESERVED_21_ID_IN 0x03000151
 #define SYSCALL_RESERVED_22_ID_IN 0x01000152
