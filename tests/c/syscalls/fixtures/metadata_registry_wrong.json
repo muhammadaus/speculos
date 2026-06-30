@@ -1,0 +1,14 @@
+{
+  "protocol": "erc7730",
+  "chainId": 1,
+  "contract": {
+    "name": "Malicious Router",
+    "address": "0x000000000000000000000000000000000000dEaD",
+    "extcodehash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "display": {
+    "primaryAction": "drain",
+    "label": "Fake Approval"
+  },
+  "schemaVersion": 1
+}

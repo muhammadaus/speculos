@@ -3,10 +3,12 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <cmocka.h>
 
+#include "../utils.h"
 #include "bolos/cx.h"
 #include "bolos/metadata_registry.h"
 
@@ -73,6 +75,32 @@ static void hash_pair_sorted(const uint8_t *left, const uint8_t *right,
   test_keccak256(pair, sizeof(pair), out_hash);
 }
 
+static uint8_t *load_fixture(const char *relative_path, size_t *out_len)
+{
+  FILE *f;
+  long file_size;
+  size_t read_len;
+  uint8_t *buffer;
+
+  f = fopen(relative_path, "rb");
+  assert_non_null(f);
+
+  assert_int_equal(fseek(f, 0, SEEK_END), 0);
+  file_size = ftell(f);
+  assert_true(file_size >= 0);
+  rewind(f);
+
+  buffer = malloc((size_t)file_size);
+  assert_non_null(buffer);
+
+  read_len = fread(buffer, 1, (size_t)file_size, f);
+  assert_int_equal(read_len, (size_t)file_size);
+  assert_int_equal(fclose(f), 0);
+
+  *out_len = (size_t)file_size;
+  return buffer;
+}
+
 /*
  * Test 1: Approved metadata resolves through a real proof to the approval
  * root, while the revocation proof does not resolve to that same root.
@@ -91,12 +119,15 @@ static void test_approved_metadata_returns_true(void **state
   uint8_t extcodehash[32];
   memset(extcodehash, 0x11, 32);
 
-  /* Raw metadata the host delivers to the device */
-  const uint8_t metadata[] = "erc7730-uniswap-v3-router";
+  uint8_t *metadata;
+  size_t metadata_len;
+
+  metadata = load_fixture(TESTS_PATH "fixtures/metadata_registry_valid.json",
+                          &metadata_len);
 
   /* Pre-compute what the device will derive */
   uint8_t metadata_hash[32];
-  test_keccak256(metadata, sizeof(metadata) - 1, metadata_hash);
+  test_keccak256(metadata, metadata_len, metadata_hash);
 
   uint8_t approval_leaf[32];
   uint8_t approval_decoy[32];
@@ -111,10 +142,11 @@ static void test_approved_metadata_returns_true(void **state
   sys_metadata_registry_set_merkle_root(approval_root);
 
   assert_true(sys_metadata_registry_verify(chain_id, extcodehash, metadata,
-                                           sizeof(metadata) - 1,
+                                           metadata_len,
                                            approval_decoy,
                                            sizeof(approval_decoy), empty_proof,
                                            0));
+  free(metadata);
 }
 
 /*
@@ -137,10 +169,13 @@ static void test_revoked_metadata_returns_false(void **state
   uint8_t extcodehash[32];
   memset(extcodehash, 0x11, 32);
 
-  const uint8_t metadata[] = "erc7730-uniswap-v3-router";
+  uint8_t *metadata;
+  size_t metadata_len;
 
+  metadata = load_fixture(TESTS_PATH "fixtures/metadata_registry_valid.json",
+                          &metadata_len);
   uint8_t metadata_hash[32];
-  test_keccak256(metadata, sizeof(metadata) - 1, metadata_hash);
+  test_keccak256(metadata, metadata_len, metadata_hash);
 
   uint8_t approval_leaf[32];
   uint8_t approval_decoy[32];
@@ -167,11 +202,12 @@ static void test_revoked_metadata_returns_false(void **state
   sys_metadata_registry_set_merkle_root(root);
 
   assert_false(sys_metadata_registry_verify(chain_id, extcodehash, metadata,
-                                            sizeof(metadata) - 1,
+                                            metadata_len,
                                             approval_proof,
                                             sizeof(approval_proof),
                                             revocation_proof,
                                             sizeof(revocation_proof)));
+  free(metadata);
 }
 
 /*
@@ -181,15 +217,20 @@ static void test_revoked_metadata_returns_false(void **state
 static void test_hash_metadata_matches_keccak256(void **state
                                                  __attribute__((unused)))
 {
-  const uint8_t metadata[] = "erc7730-uniswap-v3-router";
+  uint8_t *metadata;
+  size_t metadata_len;
+
+  metadata = load_fixture(TESTS_PATH "fixtures/metadata_registry_valid.json",
+                          &metadata_len);
 
   uint8_t expected[32];
-  test_keccak256(metadata, sizeof(metadata) - 1, expected);
+  test_keccak256(metadata, metadata_len, expected);
 
   uint8_t actual[32];
-  sys_metadata_registry_hash_metadata(metadata, sizeof(metadata) - 1, actual);
+  sys_metadata_registry_hash_metadata(metadata, metadata_len, actual);
 
   assert_memory_equal(actual, expected, 32);
+  free(metadata);
 }
 
 /*
@@ -204,10 +245,19 @@ static void test_wrong_metadata_returns_false(void **state
   uint8_t extcodehash[32];
   memset(extcodehash, 0x11, 32);
 
-  /* Roots are built from the CORRECT metadata */
-  const uint8_t correct_metadata[] = "erc7730-uniswap-v3-router";
+  uint8_t *correct_metadata;
+  size_t correct_metadata_len;
   uint8_t correct_hash[32];
-  test_keccak256(correct_metadata, sizeof(correct_metadata) - 1, correct_hash);
+  uint8_t *wrong_metadata;
+  size_t wrong_metadata_len;
+
+  correct_metadata =
+      load_fixture(TESTS_PATH "fixtures/metadata_registry_valid.json",
+                   &correct_metadata_len);
+  wrong_metadata =
+      load_fixture(TESTS_PATH "fixtures/metadata_registry_wrong.json",
+                   &wrong_metadata_len);
+  test_keccak256(correct_metadata, correct_metadata_len, correct_hash);
 
   uint8_t approval_leaf[32];
   uint8_t approval_decoy[32];
@@ -221,14 +271,14 @@ static void test_wrong_metadata_returns_false(void **state
 
   sys_metadata_registry_set_merkle_root(approval_root);
 
-  /* Device receives WRONG metadata */
-  const uint8_t wrong_metadata[] = "erc7730-MALICIOUS-contract";
   assert_false(sys_metadata_registry_verify(chain_id, extcodehash,
                                             wrong_metadata,
-                                            sizeof(wrong_metadata) - 1,
+                                            wrong_metadata_len,
                                             approval_decoy,
                                             sizeof(approval_decoy),
                                             empty_proof, 0));
+  free(correct_metadata);
+  free(wrong_metadata);
 }
 
 /*

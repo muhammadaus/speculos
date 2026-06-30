@@ -1,0 +1,14 @@
+{
+  "protocol": "erc7730",
+  "chainId": 1,
+  "contract": {
+    "name": "Uniswap V3 Router",
+    "address": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    "extcodehash": "0x1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "display": {
+    "primaryAction": "swap",
+    "label": "Uniswap V3 Router"
+  },
+  "schemaVersion": 1
+}
